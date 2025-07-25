@@ -1,0 +1,64 @@
+#!/bin/bash
+#PBS -l nodes=1:ppn=16,walltime=4:00:00
+#PBS -l vmem=31gb
+#PBS -N tractseg
+#PBS -V
+
+# INPUT PARSING
+dwi=$(jq -r '.dwi' config.json)
+bvals=$(jq -r '.bvals' config.json)
+bvecs=$(jq -r '.bvecs' config.json)
+t1w=$(jq -r .t1 config.json)
+
+#...
+
+#create a subjects folder  (e.g., [root] will be subjects)
+#create a subfolder of OUR subject (e.g., S1 will be just subject)
+mkdir -p data/input
+
+
+#copy files inside sybject folder in the way tractoflow wants
+cp ${dwi} data/input/dwi.nii.gz
+cp ${bvals} data/input/bval
+cp ${bvecs} data/input/bvec
+cp ${t1w} data/input/t1.nii.gz
+
+    # --input=/path/to/[root]             Root folder containing multiple subjects
+
+    #                                     [root]
+    #                                     ├── S1
+    #                                     │   ├── *dwi.nii.gz
+    #                                     │   ├── *bval
+    #                                     │   ├── *bvec
+    #                                     │   ├── *rev_b0.nii.gz  (optional)
+    #                                     │   ├── *aparc+aseg.nii.gz  (optional)
+    #                                     │   ├── *wmparc.nii.gz  (optional)
+    #                                     │   └── *t1.nii.gz
+    #                                     └── S2
+    #                                         ├── *dwi.nii.gz
+    #                                         ├── *bval
+    #                                         ├── *bvec
+    #                                         ├── *rev_b0.nii.gz  (optional)
+    #                                         ├── *aparc+aseg.nii.gz  (optional)
+    #                                         ├── *wmparc.niZi.gz  (optional)
+    #                                         └── *t1.nii.gz
+
+
+#create subjects output folder
+mkdir -p ~/data/output
+
+#run the singularity
+# nextflow run ./main.nf  --input ~/data/input/  -with-singularity scilus_1.6.0.sif  --output_dir ~/data/output --processes 23
+
+singularity exec  \
+  -B ./data:/data \
+  -B ./data/output:/output \
+  ./tractoflow.sif \
+    tractoflow \
+    --input /data/input/ \
+    --output_dir /data/output/ \
+    -with-singularity /tractoflow/scilus_1.6.0.sif \
+    --processes 23
+
+
+#nextflow run /tractoflow/main.nf 
