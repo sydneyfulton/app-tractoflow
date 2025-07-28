@@ -46,6 +46,9 @@ cp ${t1w} data/input/t1.nii.gz
 
 #create subjects output folder
 mkdir -p ./data/output
+mkdir -p ./data/output/dwi
+mkdir -p ./data/ouput/t1
+mkdir -p ./data/ouput/track
 
 #run the singularity
 # nextflow run ./main.nf  --input ./data/input/  -with-singularity scilus_1.6.0.sif  --output_dir ./data/output --processes 23
