@@ -48,10 +48,10 @@ cp ${t1w} data/input/t1.nii.gz
 mkdir -p ./data/output
 
 #run the singularity
-# nextflow run ./main.nf  --input ./data/input/  -with-singularity scilus_1.6.0.sif  --output_dir ~/data/output --processes 23
+# nextflow run ./main.nf  --input ./data/input/  -with-singularity scilus_1.6.0.sif  --output_dir ./data/output --processes 23
 
 singularity exec  \
-  -B ./data:/data \
+  -B ./data/input:/data/input \
   -B ./data/output:/data/output \
   -e docker://sydneyfulton/tractoflow:0.0.1 \
     tractoflow \
