@@ -53,7 +53,7 @@ mkdir -p ~/data/output
 singularity exec  \
   -B ./data:/data \
   -B ./data/output:/output \
-  ./tractoflow.sif \
+  -e docker://sydneyfulton/tractoflow:0.0.1 \
     tractoflow \
     --input /data/input/ \
     --output_dir /data/output/ \
