@@ -104,4 +104,5 @@ Replace placeholders with the appropriate dataset and project IDs.
 If utilizing this pipeline, please cite:
 
 * Theaud, G., Houde, J. C., Boré, A., Rheault, F., Morency, F., & Descoteaux, M. (2020). TractoFlow: A robust, efficient and reproducible diffusion MRI pipeline leveraging Nextflow & Singularity. Neuroimage, 218, 116889.
+* Hayashi, S., Caron, B. A., Heinsfeld, A. S., ... & Pestilli, F. (2024). brainlife. io: a decentralized and open-source cloud platform to support neuroscience research. Nature methods, 21(5), 809-813.
 ---
