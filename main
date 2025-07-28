@@ -46,9 +46,9 @@ cp ${t1w} data/input/t1.nii.gz
 
 #create subjects output folder
 mkdir -p ./data/output
-mkdir -p ./data/output/dwi
-mkdir -p ./data/ouput/t1
-mkdir -p ./data/ouput/track
+mkdir -p dwi
+mkdir -p t1
+mkdir -p track
 
 #run the singularity
 # nextflow run ./main.nf  --input ./data/input/  -with-singularity scilus_1.6.0.sif  --output_dir ./data/output --processes 23
@@ -62,6 +62,8 @@ singularity exec  \
     --output_dir /data/output/ \
     -with-singularity /tractoflow/scilus_1.6.0.sif \
     --processes 23
+cp ./data/output/Resample_DWI/*__dwi_resampled.nii.gz ./dwi
+cp 
 
 
 #nextflow run /tractoflow/main.nf 
