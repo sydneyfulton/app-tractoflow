@@ -60,8 +60,8 @@ Replace placeholders with the appropriate dataset and project IDs.
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your_username/app-tractoflow-dwi-processing.git
-   cd app-tractoflow-dwi-processing/main
+   git clone https://github.com/your_username/app-tractoflow.git
+   cd app-tractoflow/
    ```
 
 2. Prepare a `config.json` file:
