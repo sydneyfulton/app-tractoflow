@@ -53,6 +53,25 @@ mkdir -p PFT_Tracking
 #run the singularity
 # nextflow run ./main.nf  --input ./data/input/  -with-singularity scilus_1.6.0.sif  --output_dir ./data/output --processes 23
 
+# Set desired Miniconda version and install directory
+MINICONDA_VERSION="latest"
+INSTALL_DIR="$HOME/miniconda3"
+INSTALLER="Miniconda3-$MINICONDA_VERSION-Linux-x86_64.sh"
+URL="https://repo.anaconda.com/miniconda/$INSTALLER"
+
+# Download the installer
+wget -O miniconda.sh "$URL"
+
+# Run the installer silently
+bash miniconda.sh -b -p "$INSTALL_DIR"
+
+# Initialize conda for bash (or zsh, etc.)
+"$INSTALL_DIR/bin/conda" init
+
+# Activate conda
+source "$HOME/.bashrc"  # or ~/.zshrc if you use zsh
+
+
 conda create -n tractoflow
 conda activate tractoflow
 conda install nextflow=21.10.6 -c bioconda
