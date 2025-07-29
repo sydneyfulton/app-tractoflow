@@ -49,6 +49,8 @@ mkdir -p ./data/output
 mkdir -p Resample_DWI
 mkdir -p Resample_T1
 mkdir -p PFT_Tracking
+mkdir -p Extract_DTI_Shell
+mkdir -p Extract_FODF_Shell
 
 #run the singularity
 # nextflow run ./main.nf  --input ./data/input/  -with-singularity scilus_1.6.0.sif  --output_dir ./data/output --processes 23
@@ -62,9 +64,16 @@ singularity exec  \
     --output_dir /data/output/ \
     -with-singularity /tractoflow/scilus_1.6.0.sif \
     --processes 23
-cp ./data/output/Resample_DWI/*__dwi_resampled.nii.gz ./Resample_DWI
-cp ./data/output/Resample_T1/*__t1_resampled.nii.gz ./Resample_T1
-cp ./data/output/PFT_Tracking/*__pft_tracking_prob_wm_seed_0.trk ./PFT_Tracking
+cp ./data/output/Resample_DWI/*__dwi_resampled.nii.gz ./Resample_DWI/dwi.nii.gz
+
+cp ./data/output/Extract_DTI_Shell/*__bval_dti ./Extract_DTI_Shell/dwi.bvecs
+cp ./data/output/Extract_DTI_Shell/*__bval_dti ./Extract_DTI_Shell/dwi.bvals
+
+cp ./data/output/Extract_FODF_Shell/*__bval_fodf ./Extract_FODF_Shell/dwi.bvals
+cp ./data/output/Extract_FODF_Shell/*__bval_fodf ./Extract_FODF_Shell/dwi.bvals
+
+cp ./data/output/Resample_T1/*__t1_resampled.nii.gz ./Resample_T1/t1.nii.gz
+cp ./data/output/PFT_Tracking/*__pft_tracking_prob_wm_seed_0.trk ./PFT_Tracking/track.trk
 
 
 #nextflow run /tractoflow/main.nf 
