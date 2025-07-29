@@ -66,11 +66,8 @@ singularity exec  \
     --processes 23
 cp ./data/output/Resample_DWI/*__dwi_resampled.nii.gz ./Resample_DWI/dwi.nii.gz
 
-cp ./data/output/Extract_DTI_Shell/*__bval_dti ./Extract_DTI_Shell/dwi.bvecs
-cp ./data/output/Extract_DTI_Shell/*__bval_dti ./Extract_DTI_Shell/dwi.bvals
-
-cp ./data/output/Extract_FODF_Shell/*__bval_fodf ./Extract_FODF_Shell/dwi.bvals
-cp ./data/output/Extract_FODF_Shell/*__bval_fodf ./Extract_FODF_Shell/dwi.bvals
+cp ./data/output/Extract_FODF_Shell/*__bval_fodf ./Resample_DWI/dwi.bvals
+cp ./data/output/Extract_FODF_Shell/*__bval_fodf ./Resample_DWI/dwi.bvals
 
 cp ./data/output/Resample_T1/*__t1_resampled.nii.gz ./Resample_T1/t1.nii.gz
 cp ./data/output/PFT_Tracking/*__pft_tracking_prob_wm_seed_0.trk ./PFT_Tracking/track.trk
