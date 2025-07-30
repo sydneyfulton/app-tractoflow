@@ -86,6 +86,7 @@ cd "$TRACTOFLOW_REPO"
 
 echo "Running TractoFlow..."
 export APPTAINERENV_TMPDIR=/tmp
+export NXF_SINGULARITY_RUNOPTIONS="--home $(pwd)"
 nextflow run ./main.nf \
     --input ../$INPUT_ROOT \
     -with-singularity ../$SCIL_IMAGE \
