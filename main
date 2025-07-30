@@ -85,11 +85,13 @@ cd tractoflow
 # Make sure nextflow is in the path for this session only
 export PATH="$(conda info --base)/envs/tractoflow/bin:$PATH"
 
+singularity pull --name scilus_1.6.0.sif docker://scilus/scilus:1.6.0
+
 # Run nextflow
 nextflow run ./main.nf \
-  --input ../data/input/ \
-  -with-singularity ../scilus_1.6.0.sif \
-  --output_dir ../data/output \
+  --input ./data/input/ \
+  -with-singularity ./scilus_1.6.0.sif \
+  --output_dir ./data/output \
   --processes 23
 
 
