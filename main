@@ -5,6 +5,7 @@
 #PBS -V
 
 set -e  # Stop on error
+set -o pipefail
 
 # === USER CONFIGURATION ===
 SUBJECT_ID="S1"
@@ -46,15 +47,10 @@ fi
 source "$INSTALL_DIR/etc/profile.d/conda.sh"
 
 # === ACCEPT TOS FOR CONDA CHANNELS ===
-if conda help | grep -q "tos"; then
-    echo "Accepting Conda ToS..."
+if conda help | grep -q 'tos'; then
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-else
-    echo "Skipping ToS acceptance: 'conda tos' not supported in this build."
 fi
-
-
 
 # === CREATE ENV (IF NEEDED) ===
 if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
@@ -66,7 +62,7 @@ else
     conda activate "$CONDA_ENV_NAME"
 fi
 
-# === EXPORT BIN PATH JUST IN CASE ===
+# === ENSURE BIN PATH IS SET ===
 export PATH="$INSTALL_DIR/envs/$CONDA_ENV_NAME/bin:$PATH"
 
 # === PULL SINGULARITY IMAGE (IF NEEDED) ===
@@ -81,27 +77,31 @@ if [ ! -d "$TRACTOFLOW_REPO" ]; then
     git clone https://github.com/scilus/tractoflow.git "$TRACTOFLOW_REPO"
 fi
 
-# === RUN TRACTOFLOW ===
 cd "$TRACTOFLOW_REPO"
 
-# Fix the runOptions to use a safe home dir
+# === PATCH CONFIG TO FIX SINGULARITY HOME ISSUE ===
 sed -i 's|singularity\.runOptions *=.*|singularity.runOptions = "--home ${baseDir}"|' nextflow.config
 
-
-echo "Running TractoFlow..."
-export APPTAINERENV_TMPDIR=/tmp
-export NXF_SINGULARITY_RUNOPTIONS="--home $(pwd)"
+# === RUN PIPELINE WITH LOGGING ===
+echo "Running TractoFlow with full trace/logging..."
 nextflow run ./main.nf \
     --input ../$INPUT_ROOT \
     -with-singularity ../$SCIL_IMAGE \
     --output_dir ../$OUTPUT_ROOT \
-    --processes 16 
+    --processes 16 \
+    -with-trace trace.txt \
+    -with-report report.html \
+    -with-timeline timeline.html \
+    -with-dag flowchart.png || {
+        echo "❌ Pipeline failed. Check .nextflow.log and trace.txt for diagnostics."
+        exit 1
+    }
 
-# === COPY KEY OUTPUTS ===
-cp ../$OUTPUT_ROOT/Resample_DWI/*__dwi_resampled.nii.gz ../Resample_DWI/dwi.nii.gz
-cp ../$OUTPUT_ROOT/Extract_FODF_Shell/*__bval_fodf ../Resample_DWI/dwi.bvals
-cp ../$OUTPUT_ROOT/Extract_FODF_Shell/*__bvec_fodf ../Resample_DWI/dwi.bvecs
-cp ../$OUTPUT_ROOT/Resample_T1/*__t1_resampled.nii.gz ../Resample_T1/t1.nii.gz
-cp ../$OUTPUT_ROOT/PFT_Tracking/*__pft_tracking_prob_wm_seed_0.trk ../PFT_Tracking/track.trk
+# === COPY KEY OUTPUTS (IF COMPLETED) ===
+cp ../$OUTPUT_ROOT/Resample_DWI/*__dwi_resampled.nii.gz ../Resample_DWI/dwi.nii.gz || echo "⚠️ Missing dwi.nii.gz"
+cp ../$OUTPUT_ROOT/Extract_FODF_Shell/*__bval_fodf ../Resample_DWI/dwi.bvals || echo "⚠️ Missing bval"
+cp ../$OUTPUT_ROOT/Extract_FODF_Shell/*__bvec_fodf ../Resample_DWI/dwi.bvecs || echo "⚠️ Missing bvec"
+cp ../$OUTPUT_ROOT/Resample_T1/*__t1_resampled.nii.gz ../Resample_T1/t1.nii.gz || echo "⚠️ Missing t1.nii.gz"
+cp ../$OUTPUT_ROOT/PFT_Tracking/*__pft_tracking_prob_wm_seed_0.trk ../PFT_Tracking/track.trk || echo "⚠️ Missing track.trk"
 
-echo "✅ TractoFlow pipeline completed successfully."
+echo "✅ TractoFlow pipeline completed. Logs: .nextflow.log, trace.txt, report.html, timeline.html"
