@@ -46,8 +46,14 @@ fi
 source "$INSTALL_DIR/etc/profile.d/conda.sh"
 
 # === ACCEPT TOS FOR CONDA CHANNELS ===
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+if [ "$CONDA_MAJOR" -ge 24 ] && [ "$CONDA_MINOR" -ge 1 ]; then
+    echo "Accepting Conda ToS..."
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+else
+    echo "Skipping ToS acceptance: Conda version $CONDA_VERSION does not require it."
+fi
+
 
 # === CREATE ENV (IF NEEDED) ===
 if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
