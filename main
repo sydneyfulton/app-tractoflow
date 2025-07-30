@@ -4,9 +4,10 @@
 #PBS -N tractoflow
 #PBS -V
 
-set -euo pipefail
+set -e
+set -o pipefail
 
-# === USER CONFIGURATION ===
+# === CONFIGURATION ===
 SUBJECT_ID="S1"
 INPUT_ROOT="data/input"
 OUTPUT_ROOT="data/output"
@@ -16,7 +17,7 @@ CONDA_ENV_NAME="tractoflow"
 NEXTFLOW_VERSION="21.10.6"
 SCIL_IMAGE="scilus_1.6.0.sif"
 TRACTOFLOW_REPO="tractoflow"
-LOG_DIR="logs_$(date +%Y%m%d_%H%M%S)"
+LOG_DIR="../logs_$(date +%Y%m%d_%H%M%S)"
 
 # === INPUT PARSING ===
 dwi=$(jq -r '.dwi' config.json)
@@ -24,37 +25,39 @@ bvals=$(jq -r '.bvals' config.json)
 bvecs=$(jq -r '.bvecs' config.json)
 t1w=$(jq -r '.t1' config.json)
 
-# === PREPARE INPUT STRUCTURE ===
+# === CREATE INPUT STRUCTURE ===
 mkdir -p "$INPUT_ROOT/$SUBJECT_ID"
 cp "$dwi"   "$INPUT_ROOT/$SUBJECT_ID/dwi.nii.gz"
 cp "$bvals" "$INPUT_ROOT/$SUBJECT_ID/bval"
 cp "$bvecs" "$INPUT_ROOT/$SUBJECT_ID/bvec"
 cp "$t1w"   "$INPUT_ROOT/$SUBJECT_ID/t1.nii.gz"
 
-# === CREATE OUTPUT STRUCTURE ===
+# === PREP OUTPUT STRUCTURE ===
 mkdir -p "$OUTPUT_ROOT" Resample_DWI Resample_T1 PFT_Tracking "$LOG_DIR"
 
 # === INSTALL MINICONDA (IF NEEDED) ===
 if [ ! -d "$INSTALL_DIR" ]; then
-    echo "🔧 Installing Miniconda..."
+    echo "📦 Installing Miniconda..."
     INSTALLER="Miniconda3-$MINICONDA_VERSION-Linux-x86_64.sh"
     wget -O miniconda.sh "https://repo.anaconda.com/miniconda/$INSTALLER"
     bash miniconda.sh -b -p "$INSTALL_DIR"
     rm miniconda.sh
 fi
 
-# === LOAD CONDA INTO CURRENT SHELL ===
+# === LOAD CONDA ===
 source "$INSTALL_DIR/etc/profile.d/conda.sh"
 
-# === ACCEPT TERMS OF SERVICE (if supported) ===
-if conda help | grep -q 'tos'; then
+# === ACCEPT TOS IF SUPPORTED ===
+if conda tos --help &> /dev/null; then
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+else
+    echo "ℹ️ 'conda tos' not supported. Skipping."
 fi
 
 # === CREATE CONDA ENV (IF NEEDED) ===
 if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
-    echo "📦 Creating Conda env: $CONDA_ENV_NAME"
+    echo "🔧 Creating Conda env: $CONDA_ENV_NAME"
     conda create -n "$CONDA_ENV_NAME" -y
     conda activate "$CONDA_ENV_NAME"
     conda install -y -c bioconda nextflow="$NEXTFLOW_VERSION"
@@ -62,50 +65,54 @@ else
     conda activate "$CONDA_ENV_NAME"
 fi
 
+# === FIX openjdk unbound variable error ===
+JDK_ACTIVATE="$INSTALL_DIR/envs/$CONDA_ENV_NAME/etc/conda/activate.d/openjdk_activate.sh"
+if [ -f "$JDK_ACTIVATE" ]; then
+    sed -i '1s|^|JAVA_HOME={JAVA_HOME:-}\n|' "$JDK_ACTIVATE"
+fi
+
+# === EXPORT PATH FOR SAFETY ===
 export PATH="$INSTALL_DIR/envs/$CONDA_ENV_NAME/bin:$PATH"
 
-# === PULL SINGULARITY IMAGE (IF NEEDED) ===
+# === PULL SINGULARITY IMAGE ===
 if [ ! -f "$SCIL_IMAGE" ]; then
-    echo "📦 Pulling Singularity image: $SCIL_IMAGE"
     singularity pull --name "$SCIL_IMAGE" docker://scilus/scilus:1.6.0
 fi
 
-# === CLONE TRACTOFLOW REPO (IF NEEDED) ===
+# === CLONE TRACTOFLOW (IF NEEDED) ===
 if [ ! -d "$TRACTOFLOW_REPO" ]; then
-    echo "📥 Cloning TractoFlow..."
     git clone https://github.com/scilus/tractoflow.git "$TRACTOFLOW_REPO"
 fi
 
 cd "$TRACTOFLOW_REPO"
 
-# === PATCH nextflow.config FOR SINGULARITY BINDING ===
+# === FIX CONFIG FOR HOME ISSUE ===
 sed -i '/singularity\.runOptions/d' nextflow.config
-echo 'singularity.runOptions = "--home ${baseDir}"' >> nextflow.config
+echo 'singularity.runOptions = "--home \${baseDir}"' >> nextflow.config
 
-# === RUN PIPELINE WITH FULL LOGGING ===
-echo "🚀 Running TractoFlow..."
+# === RUN TRACTOFLOW WITH LOGGING ===
 nextflow run ./main.nf \
     --input ../"$INPUT_ROOT" \
-    --output_dir ../"$OUTPUT_ROOT" \
     -with-singularity ../"$SCIL_IMAGE" \
+    --output_dir ../"$OUTPUT_ROOT" \
     --processes 16 \
-    -with-trace ../"$LOG_DIR"/trace.txt \
-    -with-report ../"$LOG_DIR"/report.html \
-    -with-timeline ../"$LOG_DIR"/timeline.html \
-    -with-dag ../"$LOG_DIR"/flowchart.png || {
-        echo "❌ Pipeline failed. See $LOG_DIR for logs."
-        cp .nextflow.log ../"$LOG_DIR"/
+    -with-trace "$LOG_DIR/trace.txt" \
+    -with-report "$LOG_DIR/report.html" \
+    -with-timeline "$LOG_DIR/timeline.html" \
+    -with-dag "$LOG_DIR/flowchart.png" || {
+        echo "❌ Pipeline failed. Check $LOG_DIR/*.log"
+        cp .nextflow.log "$LOG_DIR/nextflow.log"
         exit 1
     }
 
-cp .nextflow.log ../"$LOG_DIR"/
+cp .nextflow.log "$LOG_DIR/nextflow.log"
 
-# === COLLECT FINAL OUTPUTS ===
-echo "📦 Collecting final outputs..."
+# === COPY OUTPUTS ===
 cp ../"$OUTPUT_ROOT"/Resample_DWI/*__dwi_resampled.nii.gz ../Resample_DWI/dwi.nii.gz || echo "⚠️ Missing dwi.nii.gz"
 cp ../"$OUTPUT_ROOT"/Extract_FODF_Shell/*__bval_fodf ../Resample_DWI/dwi.bvals || echo "⚠️ Missing bval"
 cp ../"$OUTPUT_ROOT"/Extract_FODF_Shell/*__bvec_fodf ../Resample_DWI/dwi.bvecs || echo "⚠️ Missing bvec"
-cp ../"$OUTPUT_ROOT"/Resample_T1/*__t1_resampled.nii.gz ../Resample_T1/t1.nii.gz || echo "⚠️ Missing t1.nii.gz"
+cp ../"$OUTPUT_ROOT"/Resample_T1/*__t1_resampled.nii.gz ../Resample_T1/t1.nii.gz || echo "⚠️ Missing t1"
 cp ../"$OUTPUT_ROOT"/PFT_Tracking/*__pft_tracking_prob_wm_seed_0.trk ../PFT_Tracking/track.trk || echo "⚠️ Missing track.trk"
 
-echo "✅ TractoFlow completed successfully. See $LOG_DIR for logs."
+echo "✅ TractoFlow pipeline completed."
+echo "📝 Logs available in: $LOG_DIR"
