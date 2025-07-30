@@ -90,6 +90,9 @@ cd "$TRACTOFLOW_REPO"
 sed -i '/singularity\.runOptions/d' nextflow.config
 echo 'singularity.runOptions = "--home \${baseDir}"' >> nextflow.config
 
+export PATH=$(dirname "$(which singularity)"):$PATH
+export NXF_SINGULARITY_CLI="/usr/bin/singularity"
+
 # === RUN TRACTOFLOW WITH LOGGING ===
 nextflow run ./main.nf \
     --input ../"$INPUT_ROOT" \
