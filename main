@@ -72,16 +72,26 @@ bash miniconda.sh -b -p "$INSTALL_DIR"
 source "$HOME/.bashrc"  # or ~/.zshrc if you use zsh
 
 
-conda create -n tractoflow
+# Create and activate conda environment without modifying .bashrc
+conda create -n tractoflow -y
+source $(conda info --base)/etc/profile.d/conda.sh
 conda activate tractoflow
-conda install nextflow=21.10.6 -c bioconda
+conda install nextflow=21.10.6 -c bioconda -y
 
-
-git clone https://github.com/scilus/tractoflow.git
+# Clone Tractoflow repo (skip if already exists)
+[ ! -d "tractoflow" ] && git clone https://github.com/scilus/tractoflow.git
 cd tractoflow
-ln -s /opt/miniconda/envs/tractoflow/bin/nextflow /usr/local/bin/nextflow
 
-nextflow run ./main.nf  --input ./data/input/  -with-singularity scilus_1.6.0.sif  --output_dir ./data/output --processes 23
+# Make sure nextflow is in the path for this session only
+export PATH="$(conda info --base)/envs/tractoflow/bin:$PATH"
+
+# Run nextflow
+nextflow run ./main.nf \
+  --input ../data/input/ \
+  -with-singularity ../scilus_1.6.0.sif \
+  --output_dir ../data/output \
+  --processes 23
+
 
 #singularity exec  \
 #  -B ./data/input:/data/input \
