@@ -85,11 +85,13 @@ fi
 cd "$TRACTOFLOW_REPO"
 
 echo "Running TractoFlow..."
+export APPTAINERENV_TMPDIR=/tmp
 nextflow run ./main.nf \
     --input ../$INPUT_ROOT \
     -with-singularity ../$SCIL_IMAGE \
     --output_dir ../$OUTPUT_ROOT \
-    --processes 16
+    --processes 16 \
+  -with-singularity-options "--home $(pwd)"
 
 # === COPY KEY OUTPUTS ===
 cp ../$OUTPUT_ROOT/Resample_DWI/*__dwi_resampled.nii.gz ../Resample_DWI/dwi.nii.gz
