@@ -90,7 +90,15 @@ cd "$TRACTOFLOW_REPO"
 sed -i '/singularity\.runOptions/d' nextflow.config
 echo 'singularity.runOptions = "--home \${baseDir}"' >> nextflow.config
 
-export PATH=$(dirname "$(which singularity)"):$PATH
+# === ENSURE SINGULARITY IS VISIBLE TO NEXTFLOW JOBS ===
+SINGULARITY_PATH=$(which singularity)
+if [[ -z "$SINGULARITY_PATH" ]]; then
+    echo "❌ Error: singularity not found in PATH."
+    exit 1
+fi
+export NXF_SINGULARITY_CLI="$SINGULARITY_PATH"
+echo "✅ Singularity detected at: $SINGULARITY_PATH"
+
 export NXF_SINGULARITY_CLI="/usr/bin/singularity"
 
 # === RUN TRACTOFLOW WITH LOGGING ===
