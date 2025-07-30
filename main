@@ -109,7 +109,6 @@ cp .nextflow.log "$LOG_DIR/nextflow.log"
 
 # === COLLECT PER-JOB COMMAND LOGS INTO A CENTRAL LOG ===
 echo "📝 Aggregating command stdout/stderr logs into ./logs/command_logs.txt"
-LOG_DIR="../logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/command_logs.txt"
 WORK_DIR="../$OUTPUT_ROOT/work"
