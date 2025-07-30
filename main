@@ -83,6 +83,7 @@ fi
 
 # === RUN TRACTOFLOW ===
 cd "$TRACTOFLOW_REPO"
+sed -i '/autoMounts = true/a\    runOptions = "--home ${baseDir}"' nextflow.config
 
 echo "Running TractoFlow..."
 export APPTAINERENV_TMPDIR=/tmp
