@@ -4,18 +4,18 @@
 #PBS -N tractoflow
 #PBS -V
 
-set -e  # Stop on first error
+set -e  # Stop on error
 
-# === CONFIGURATION ===
+# === USER CONFIGURATION ===
 SUBJECT_ID="S1"
 INPUT_ROOT="data/input"
 OUTPUT_ROOT="data/output"
 MINICONDA_VERSION="latest"
 INSTALL_DIR="$HOME/miniconda3"
-SCIL_IMAGE="scilus_1.6.0.sif"
 CONDA_ENV_NAME="tractoflow"
-TRACTOFLOW_REPO="tractoflow"
 NEXTFLOW_VERSION="21.10.6"
+SCIL_IMAGE="scilus_1.6.0.sif"
+TRACTOFLOW_REPO="tractoflow"
 
 # === INPUT PARSING ===
 dwi=$(jq -r '.dwi' config.json)
@@ -23,18 +23,17 @@ bvals=$(jq -r '.bvals' config.json)
 bvecs=$(jq -r '.bvecs' config.json)
 t1w=$(jq -r '.t1' config.json)
 
-# === SETUP FOLDERS ===
+# === CREATE INPUT STRUCTURE ===
 mkdir -p $INPUT_ROOT/$SUBJECT_ID
-mkdir -p $OUTPUT_ROOT
-mkdir -p Resample_DWI Resample_T1 PFT_Tracking
-
-# === COPY FILES ===
 cp "$dwi"   $INPUT_ROOT/$SUBJECT_ID/dwi.nii.gz
 cp "$bvals" $INPUT_ROOT/$SUBJECT_ID/bval
 cp "$bvecs" $INPUT_ROOT/$SUBJECT_ID/bvec
 cp "$t1w"   $INPUT_ROOT/$SUBJECT_ID/t1.nii.gz
 
-# === INSTALL MINICONDA IF NEEDED ===
+# === PREP OUTPUT STRUCTURE ===
+mkdir -p $OUTPUT_ROOT Resample_DWI Resample_T1 PFT_Tracking
+
+# === INSTALL MINICONDA (IF NEEDED) ===
 if [ ! -d "$INSTALL_DIR" ]; then
     echo "Installing Miniconda..."
     INSTALLER="Miniconda3-$MINICONDA_VERSION-Linux-x86_64.sh"
@@ -43,10 +42,14 @@ if [ ! -d "$INSTALL_DIR" ]; then
     rm miniconda.sh
 fi
 
-# === ENABLE CONDA IN SCRIPT ===
+# === LOAD CONDA INTO SHELL ===
 source "$INSTALL_DIR/etc/profile.d/conda.sh"
 
-# === CREATE AND ACTIVATE ENVIRONMENT ===
+# === ACCEPT TOS FOR CONDA CHANNELS ===
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+# === CREATE ENV (IF NEEDED) ===
 if ! conda env list | grep -q "$CONDA_ENV_NAME"; then
     echo "Creating Conda environment: $CONDA_ENV_NAME"
     conda create -n "$CONDA_ENV_NAME" -y
@@ -56,31 +59,32 @@ else
     conda activate "$CONDA_ENV_NAME"
 fi
 
-# === OPTIONAL: Add env bin to PATH explicitly ===
+# === EXPORT BIN PATH JUST IN CASE ===
 export PATH="$INSTALL_DIR/envs/$CONDA_ENV_NAME/bin:$PATH"
 
-# === DOWNLOAD SINGULARITY IMAGE IF NEEDED ===
+# === PULL SINGULARITY IMAGE (IF NEEDED) ===
 if [ ! -f "$SCIL_IMAGE" ]; then
     echo "Pulling Singularity image: $SCIL_IMAGE"
     singularity pull --name "$SCIL_IMAGE" docker://scilus/scilus:1.6.0
 fi
 
-# === CLONE TRACTOFLOW IF NEEDED ===
+# === CLONE TRACTOFLOW REPO (IF NEEDED) ===
 if [ ! -d "$TRACTOFLOW_REPO" ]; then
     echo "Cloning TractoFlow..."
     git clone https://github.com/scilus/tractoflow.git "$TRACTOFLOW_REPO"
 fi
+
+# === RUN TRACTOFLOW ===
 cd "$TRACTOFLOW_REPO"
 
-# === RUN PIPELINE ===
-echo "Running TractoFlow pipeline..."
+echo "Running TractoFlow..."
 nextflow run ./main.nf \
     --input ../$INPUT_ROOT \
     -with-singularity ../$SCIL_IMAGE \
     --output_dir ../$OUTPUT_ROOT \
     --processes 16
 
-# === COPY OUTPUT FILES ===
+# === COPY KEY OUTPUTS ===
 cp ../$OUTPUT_ROOT/Resample_DWI/*__dwi_resampled.nii.gz ../Resample_DWI/dwi.nii.gz
 cp ../$OUTPUT_ROOT/Extract_FODF_Shell/*__bval_fodf ../Resample_DWI/dwi.bvals
 cp ../$OUTPUT_ROOT/Extract_FODF_Shell/*__bvec_fodf ../Resample_DWI/dwi.bvecs
