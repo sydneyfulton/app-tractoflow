@@ -83,7 +83,10 @@ fi
 
 # === RUN TRACTOFLOW ===
 cd "$TRACTOFLOW_REPO"
-sed -i '/autoMounts = true/a\    runOptions = "--home ${baseDir}"' nextflow.config
+
+# Fix the runOptions to use a safe home dir
+sed -i 's|singularity\.runOptions *=.*|singularity.runOptions = "--home ${baseDir}"|' nextflow.config
+
 
 echo "Running TractoFlow..."
 export APPTAINERENV_TMPDIR=/tmp
